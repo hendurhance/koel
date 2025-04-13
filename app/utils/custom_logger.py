@@ -1,4 +1,3 @@
-# app/utils/custom_logger.py
 import logging
 import os
 from logging.handlers import RotatingFileHandler

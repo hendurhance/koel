@@ -23,7 +23,6 @@ class ExchangeRateController:
     ) -> ExchangeRateWithCurrencySchema:
         """
         Get the most recent exchange rate between two currencies with optional amount conversion.
-        This version attempts to use a cached result before executing the DB query.
         """
         if base_code.upper() == target_code.upper():
             raise HTTPException(

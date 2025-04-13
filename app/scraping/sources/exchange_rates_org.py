@@ -21,7 +21,7 @@ class ExchangeRatesOrgUkScraper(BaseScraper):
 
         formatted_base_name = "-".join(word.capitalize() for word in base_name.split())
         self.url = f"https://www.exchangerates.org.uk/{formatted_base_name}-{base_currency}-currency-table.html"
-        self.user_agent_rotator = UserAgentRotator()
+    self.user_agent_rotator = UserAgentRotator()
         self.headers = {
             "User-Agent": self.user_agent_rotator.get_random_user_agent(),
             "Accept-Language": "en-US,en;q=0.9",

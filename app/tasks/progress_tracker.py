@@ -77,4 +77,4 @@ class ProgressTracker:
                 datetime.fromisoformat(job_data["start_time"])
             ).total_seconds()
             CacheManager.set(f"job:{job_id}", job_data)
-        return job_datax
+        return job_data
