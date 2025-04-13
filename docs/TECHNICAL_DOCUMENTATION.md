@@ -519,7 +519,7 @@ The ETL (Extract, Transform, Load) process is central to Koel's operation:
 
 ### Scraper Sources
 
-Each source is implemented as a separate class that inherits from the `BaseScraperSource`:
+Each source is implemented as a separate class that inherits from the `BaseScraper`:
 
 1. **Source Classification**:
    - **Base-Target Sources**: Require both base and target currencies in the request URL
