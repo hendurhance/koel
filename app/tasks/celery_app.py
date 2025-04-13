@@ -15,16 +15,14 @@ celery_app.conf.beat_schedule = {
     # Primary currencies every 6 hours
     "scrape-primary-currencies-every-6-hours": {
         "task": "app.tasks.exchange_rates.scrape_currency_group",
-        # "schedule": crontab(hour="0,6,12,18", minute=0),
-        "schedule": crontab(minute="*/30"),
+        "schedule": crontab(hour="0,6,12,18", minute=0),
         "args": ["primary"],
     },
     
     # Secondary currencies every 12 hours
     "scrape-secondary-currencies-every-12-hours": {
         "task": "app.tasks.exchange_rates.scrape_currency_group",
-        # "schedule": crontab(hour="3,15", minute=0),
-        "schedule": crontab(minute="*/30"),
+        "schedule": crontab(hour="3,15", minute=0),
         "args": ["secondary"],
     },
     # Optionally, if you still want an overall full scrape at a time when group tasks are not running,
