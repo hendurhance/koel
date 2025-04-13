@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: koel_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-P@ssw0rd}
+      POSTGRES_DB: ${DB_NAME:-koel}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and Celery broker
+  redis:
+    image: redis:alpine
+    container_name: koel_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI application
+  api:
+    build: .
+    container_name: koel_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - API_VERSION=${API_VERSION:-0.1.0}
+      - API_TITLE=${API_TITLE:-Koel Exchange Rate API}
+      - DB_CONNECTION=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
+      - DB_NAME=${DB_NAME:-koel}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - ./:/app
+      - ./logs:/app/logs
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    command: >
+      bash -c "
+        sleep 5 &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Celery worker for background tasks
+  celery_worker:
+    build: .
+    container_name: koel_celery_worker
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
+      - api
+    environment:
+      - API_VERSION=${API_VERSION:-0.1.0}
+      - API_TITLE=${API_TITLE:-Koel Exchange Rate API}
+      - DB_CONNECTION=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
+      - DB_NAME=${DB_NAME:-koel}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - ./:/app
+      - ./logs:/app/logs
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+
+  # Celery Beat for scheduled tasks
+  celery_beat:
+    build: .
+    container_name: koel_celery_beat
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
+      - celery_worker
+    environment:
+      - API_VERSION=${API_VERSION:-0.1.0}
+      - API_TITLE=${API_TITLE:-Koel Exchange Rate API}
+      - DB_CONNECTION=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
+      - DB_NAME=${DB_NAME:-koel}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - ./:/app
+      - ./logs:/app/logs
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+
+  # Initialization service to run migrations and seed data
+  init:
+    build: .
+    container_name: koel_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB_CONNECTION=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
+      - DB_NAME=${DB_NAME:-koel}
+    volumes:
+      - ./:/app
+    command: >
+      bash -c "
+        sleep 10 &&
+        alembic upgrade head &&
+        python -m app.db.seed
+      "
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:

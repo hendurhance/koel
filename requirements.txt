@@ -1,0 +1,12 @@
+fastapi>=0.103.0  # Ensure FastAPI supports Pydantic v2
+uvicorn[standard]
+SQLAlchemy>=2.0.0  # Optional: Use latest SQLAlchemy
+psycopg2-binary
+celery
+redis
+requests
+beautifulsoup4
+pydantic>=2.0.0  # Explicitly require v2
+pydantic_settings>=2.0.0  # Ensure v2 compatibility
+alembic
+slack_sdk
