@@ -30,7 +30,7 @@
 
 ## About Koel
 
-Koel is a free, open-source, self-hosted exchange rate API that provides real-time currency conversion data by aggregating information from multiple data sources through web scraping. Built on an event-driven, fault-tolerant architecture, Koel eliminates usage limits and API key requirements, giving you complete control over your currency data—whether you deploy it on your own server or within a Docker container.
+Koel is a free, open-source, self-hosted exchange rate API that provides api endpoint to retrieve latest rates, historical data or time series data. It aggregates real-time currency conversion data by scraping multiple sources, ensuring high availability and accuracy through an event-driven, fault-tolerant architecture. Koel is designed to be easy to deploy and use, with no usage limits or API keys required.
 
 ## Features
 
