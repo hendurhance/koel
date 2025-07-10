@@ -27,13 +27,13 @@ async def list_currencies(db: Session = Depends(get_db)):
 
 @router.get("/rates", response_model=ApiResponse[ExchangeRateWithCurrencySchema])
 async def get_exchange_rate(
-    base: str,
-    target: str,
+    from_currency: str = Query(..., alias="from"),
+    to_currency: str = Query(..., alias="to"),
     amount: Optional[Decimal] = None,
     db: Session = Depends(get_db),
 ):
     """Get the current exchange rate between two currencies with optional amount conversion."""
-    result = ExchangeRateController.get_current_rate(db, base, target, amount)
+    result = ExchangeRateController.get_current_rate(db, from_currency, to_currency, amount)
     return success_response(
         data=result, message="Exchange rate retrieved successfully."
     )
@@ -41,15 +41,15 @@ async def get_exchange_rate(
 
 @router.get("/rates/history", response_model=ApiResponse[ExchangeRateHistorySchema])
 async def get_exchange_rate_history(
-    base: str,
-    target: str,
+    from_currency: str = Query(..., alias="from"),
+    to_currency: str = Query(..., alias="to"),
     from_date: Optional[datetime] = Query(None),
     to_date: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
 ):
     """Get exchange rate history between two currencies for a date range."""
     result = ExchangeRateController.get_rate_history(
-        db, base, target, from_date, to_date
+        db, from_currency, to_currency, from_date, to_date
     )
     return success_response(
         data=result, message="Exchange rate history retrieved successfully."

@@ -3,6 +3,12 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from decimal import Decimal
 
+try:
+    from pydantic import ConfigDict
+    PYDANTIC_V2 = True
+except ImportError:
+    PYDANTIC_V2 = False
+
 class CurrencySchema(BaseModel):
     id: int
     name: str
@@ -14,8 +20,11 @@ class CurrencySchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    if PYDANTIC_V2:
+        model_config = {"from_attributes": True}
+    else:
+        class Config:
+            orm_mode = True
 
 class ExchangeRateSchema(BaseModel):
     id: int
@@ -25,8 +34,11 @@ class ExchangeRateSchema(BaseModel):
     source: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    if PYDANTIC_V2:
+        model_config = {"from_attributes": True}
+    else:
+        class Config:
+            orm_mode = True
 
 class ExchangeRateWithCurrencySchema(ExchangeRateSchema):
     base_currency: CurrencySchema
@@ -34,13 +46,19 @@ class ExchangeRateWithCurrencySchema(ExchangeRateSchema):
     amount: Optional[Decimal] = None
     converted_amount: Optional[Decimal] = None
 
-    class Config:
-        from_attributes = True
+    if PYDANTIC_V2:
+        model_config = {"from_attributes": True}
+    else:
+        class Config:
+            orm_mode = True
 
 class ExchangeRateHistorySchema(BaseModel):
     base: str
     target: str
     rates: List[ExchangeRateSchema]
 
-    class Config:
-        from_attributes = True
+    if PYDANTIC_V2:
+        model_config = {"from_attributes": True}
+    else:
+        class Config:
+            orm_mode = True

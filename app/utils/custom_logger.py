@@ -3,10 +3,15 @@ import os
 from logging.handlers import RotatingFileHandler
 from typing import Optional
 from datetime import datetime
-import slack_sdk
 import threading
 from functools import lru_cache
 from pathlib import Path
+
+try:
+    import slack_sdk
+    SLACK_AVAILABLE = True
+except ImportError:
+    SLACK_AVAILABLE = False
 
 class CustomLogger:
     _instance = None
@@ -41,7 +46,7 @@ class CustomLogger:
         self.slack_webhook = slack_webhook
         self.max_file_size = max_file_size
         self.backup_count = backup_count
-        self.slack_client = slack_sdk.WebClient() if slack_webhook else None
+        self.slack_client = slack_sdk.WebClient() if (slack_webhook and SLACK_AVAILABLE) else None
 
         # Create logs directory
         self.log_dir.mkdir(parents=True, exist_ok=True)

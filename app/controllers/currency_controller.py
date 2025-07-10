@@ -12,15 +12,24 @@ class CurrencyController:
         cache_key = "currencies:all"
         cached_data = CacheManager.get(cache_key)
         if cached_data:
-            return [CurrencySchema.model_validate(item) for item in cached_data]
+            try:
+                return [CurrencySchema.model_validate(item) for item in cached_data]
+            except AttributeError:
+                return [CurrencySchema(**item) for item in cached_data]
         
         currencies = db.query(Currency).all()
         if not currencies:
             raise NotFoundException("No currencies found.")
 
-        result = [CurrencySchema.model_validate(currency) for currency in currencies]
+        try:
+            result = [CurrencySchema.model_validate(currency) for currency in currencies]
+        except AttributeError:
+            result = [CurrencySchema.from_orm(currency) for currency in currencies]
 
-        CacheManager.set(cache_key, [item.dict() for item in result], expire=86400)
+        try:
+            CacheManager.set(cache_key, [item.model_dump() for item in result], expire=86400)
+        except AttributeError:
+            CacheManager.set(cache_key, [item.dict() for item in result], expire=86400)
         return result
 
     @staticmethod
@@ -34,5 +43,10 @@ class CurrencyController:
         if not currency:
             raise NotFoundException(f"Currency '{code.upper()}' not found.")
 
-        CacheManager.set(cache_key, CurrencySchema.model_validate(currency).dict(), expire=86400)
+        try:
+            schema = CurrencySchema.model_validate(currency)
+            CacheManager.set(cache_key, schema.model_dump(), expire=86400)
+        except AttributeError:
+            schema = CurrencySchema.from_orm(currency)
+            CacheManager.set(cache_key, schema.dict(), expire=86400)
         return currency

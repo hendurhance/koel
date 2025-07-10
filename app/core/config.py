@@ -1,5 +1,11 @@
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings
+try:
+    from pydantic import Field, field_validator
+    from pydantic_settings import BaseSettings
+    PYDANTIC_V2 = True
+except ImportError:
+    from pydantic import BaseSettings, Field, validator
+    PYDANTIC_V2 = False
+
 from urllib.parse import quote_plus
 
 
@@ -26,18 +32,30 @@ class Config(BaseSettings):
     REDIS_DB: int = Field(default=0, env="REDIS_DB")
     REDIS_PASSWORD: str = Field(default="", env="REDIS_PASSWORD")
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    if PYDANTIC_V2:
+        model_config = {"env_file": ".env", "case_sensitive": True}
 
-    @field_validator("DB_CONNECTION")
-    def validate_db_connection(cls, v):
-        supported = ["postgresql", "mysql", "sqlite"]
-        if v not in supported:
-            raise ValueError(
-                f"Unsupported DB_CONNECTION: {v}. Supported connections are {supported}."
-            )
-        return v
+        @field_validator("DB_CONNECTION")
+        def validate_db_connection(cls, v):
+            supported = ["postgresql", "mysql", "sqlite"]
+            if v not in supported:
+                raise ValueError(
+                    f"Unsupported DB_CONNECTION: {v}. Supported connections are {supported}."
+                )
+            return v
+    else:
+        class Config:
+            env_file = ".env"
+            case_sensitive = True
+
+        @validator("DB_CONNECTION")
+        def validate_db_connection(cls, v):
+            supported = ["postgresql", "mysql", "sqlite"]
+            if v not in supported:
+                raise ValueError(
+                    f"Unsupported DB_CONNECTION: {v}. Supported connections are {supported}."
+                )
+            return v
 
     @property
     def db_url(self) -> str:

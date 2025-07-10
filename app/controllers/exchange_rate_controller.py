@@ -32,7 +32,10 @@ class ExchangeRateController:
         cache_key = f"exchange_rate:{base_code.upper()}-{target_code.upper()}"
         cached_data = CacheManager.get(cache_key)
         if cached_data:
-            result = ExchangeRateWithCurrencySchema.model_validate(cached_data)
+            try:
+                result = ExchangeRateWithCurrencySchema.model_validate(cached_data)
+            except AttributeError:
+                result = ExchangeRateWithCurrencySchema(**cached_data)
             if amount is not None:
                 converted_amount = amount * Decimal(str(result.rate))
                 rounded_amount = round(converted_amount, result.target_currency.decimal_digits)
@@ -65,7 +68,10 @@ class ExchangeRateController:
         exchange.base_currency = base_currency
         exchange.target_currency = target_currency
 
-        result = ExchangeRateWithCurrencySchema.model_validate(exchange)
+        try:
+            result = ExchangeRateWithCurrencySchema.model_validate(exchange)
+        except AttributeError:
+            result = ExchangeRateWithCurrencySchema.from_orm(exchange)
 
         # Add conversion information if an amount is provided.
         if amount is not None:
@@ -74,7 +80,10 @@ class ExchangeRateController:
             result.amount = amount
             result.converted_amount = rounded_amount
 
-        CacheManager.set(cache_key, result.dict(), expire=3600)
+        try:
+            CacheManager.set(cache_key, result.model_dump(), expire=3600)
+        except AttributeError:
+            CacheManager.set(cache_key, result.dict(), expire=3600)
         return result
 
     @staticmethod

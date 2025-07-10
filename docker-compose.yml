@@ -55,11 +55,11 @@ services:
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
       - DB_NAME=${DB_NAME:-koel}
-      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
-      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-0}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-0}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_DB=${REDIS_DB:-0}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     volumes:
       - ./:/app
@@ -90,11 +90,11 @@ services:
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
       - DB_NAME=${DB_NAME:-koel}
-      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
-      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-0}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-0}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_DB=${REDIS_DB:-0}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     volumes:
       - ./:/app
@@ -119,11 +119,11 @@ services:
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
       - DB_NAME=${DB_NAME:-koel}
-      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
-      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-0}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-0}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_DB=${REDIS_DB:-0}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     volumes:
       - ./:/app
@@ -151,6 +151,37 @@ services:
         sleep 10 &&
         alembic upgrade head &&
         python -m app.db.seed
+      "
+    restart: "no"
+
+  # Test service
+  test:
+    build: .
+    container_name: koel_test
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_CONNECTION=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-P@ssw0rd}
+      - DB_NAME=${DB_NAME:-koel_test}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST:-redis}:6379/${REDIS_DB:-1}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=${REDIS_DB:-1}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - ./:/app
+    command: >
+      bash -c "
+        sleep 5 &&
+        pytest -v --cov=app --cov-report=term-missing
       "
     restart: "no"
 

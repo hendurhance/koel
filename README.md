@@ -67,10 +67,45 @@ cd koel
 1. Build and Start the Containers:
 ```bash
 docker-compose up -d --build
+# or use the Makefile
+make build && make up
 ```
-2. Access the API documentation:
+2. The Docker setup includes:
+   - **PostgreSQL**: Database service with health checks
+   - **Redis**: Cache and message broker with persistence
+   - **API**: FastAPI application service
+   - **Celery Worker**: Background task processing
+   - **Celery Beat**: Scheduled task management
+   - **Init**: Automatic database migration and seeding
+   - **Test**: Dedicated testing environment
+3. Access the API documentation:
 ```bash
 http://localhost:8000/docs
+```
+
+### Using Makefile Commands
+The project includes a Makefile with convenient commands:
+```bash
+# View all available commands
+make help
+
+# Development workflow
+make build          # Build Docker containers
+make up             # Start all services with initialization
+make down           # Stop all services
+make logs           # View service logs
+make shell          # Open shell in API container
+
+# Testing
+make test-basic     # Run basic tests (no dependencies)
+make test           # Run all available tests
+make test-docker    # Run tests in Docker
+make test-full      # Run pytest with coverage
+
+# Development
+make dev            # Run development server
+make lint           # Run code linting
+make format         # Format code
 ```
 
 ### Local Installation
@@ -256,23 +291,30 @@ celery -A app.tasks.celery_app beat --loglevel=info
 ### Caching
 Koel uses Redis for caching the exchange rates to improve performance and run job and tasks. You can configure the caching settings in the `.env` file. By default, Koel uses a Redis instance running on `localhost:6379`. You can change the Redis URL in the `.env` file:
 ```env
-CELERY_BROKER_URL=redis://localhost:6379/1
-CELERY_RESULT_BACKEND=redis://localhost:6379/1
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_DB=1
+REDIS_DB=0
 REDIS_PASSWORD=
 ```
 ### Database
 Koel uses PostgreSQL as the database backend. You can configure the database settings in the `.env` file. By default, Koel uses a PostgreSQL instance running on `localhost:5432`. You can change the database URL in the `.env` file:
 ```env
+API_VERSION=0.1.0
+API_TITLE=Koel Exchange Rate API
+APP_PORT=8000
+
 DB_CONNECTION=postgresql
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=
 DB_NAME=koel
+
+# Set to "true" to seed the database on initialization
+SEED_DB=true
 ```
 ## Sources
 Koel scrapes data from multiple sources to provide accurate and up-to-date exchange rates. The sources are defined in the `app/scraping/sources` directory. You can add or modify the sources by creating new classes that extend the `BaseScraper` class.
