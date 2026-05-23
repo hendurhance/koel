@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Your {{ app_name }} sign-in link{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 16px 0; font-family:Georgia,'Times New Roman',serif; font-size:28px;
+           line-height:1.2; font-weight:400; color:#0b0b0d;">
+  Sign in to {{ app_name }}.
+</h1>
+<p style="margin:0 0 24px 0; font-size:15px; line-height:1.6; color:#3a3a38;">
+  Click the button below to finish signing in. This link expires in
+  <strong>{{ ttl_minutes }} minutes</strong> and can only be used once.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0;">
+  <tr>
+    <td style="background:#27645f;">
+      <a href="{{ link_url }}"
+         style="display:inline-block; padding:13px 28px; font-size:14px; font-weight:500;
+                color:#ffffff; text-decoration:none; letter-spacing:0.01em;">
+        Sign in &rarr;
+      </a>
+    </td>
+  </tr>
+</table>
+<p style="margin:0 0 8px 0; font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+          font-size:11px; line-height:1.6; color:#8a8a85; text-transform:uppercase;
+          letter-spacing:0.08em;">
+  or paste this link
+</p>
+<p style="margin:0 0 24px 0; font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+          font-size:12px; line-height:1.5; color:#3a3a38; word-break:break-all;">
+  <a href="{{ link_url }}" style="color:#27645f; text-decoration:none;">{{ link_url }}</a>
+</p>
+<p style="margin:0; font-size:13px; line-height:1.6; color:#8a8a85;">
+  If you didn&rsquo;t request this link, you can safely ignore this email &mdash; no one can
+  sign in without it.
+</p>
+{% endblock %}
