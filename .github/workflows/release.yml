@@ -76,10 +76,11 @@ jobs:
 
       - name: Sync Docker Hub overview
         if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+        continue-on-error: true
         uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD || secrets.DOCKERHUB_TOKEN }}
           repository: ${{ vars.DOCKERHUB_USERNAME }}/${{ matrix.name }}
           short-description: ${{ matrix.short_desc }}
           readme-filepath: ${{ matrix.hub_readme }}
