@@ -22,9 +22,13 @@ jobs:
           - name: koel
             context: .
             dockerfile: ./Dockerfile
+            short_desc: "Self-hostable exchange-rate API — consensus scraping, partitioned history, API-key access"
+            hub_readme: ./docs/dockerhub/koel.md
           - name: koel-frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
+            short_desc: "Self-hostable exchange-rate API Dashboard—consensus scraping, partitioned history, API-key access"
+            hub_readme: ./docs/dockerhub/koel-frontend.md
     steps:
       - uses: actions/checkout@v4
 
@@ -38,10 +42,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+          images: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/${{ matrix.name }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -60,3 +73,13 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      - name: Sync Docker Hub overview
+        if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/${{ matrix.name }}
+          short-description: ${{ matrix.short_desc }}
+          readme-filepath: ${{ matrix.hub_readme }}

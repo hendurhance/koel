@@ -56,6 +56,37 @@ You now have a running API at `:8000` and the dashboard at `:3000`. To use the r
 
 ---
 
+## Run from prebuilt images (no build)
+
+Don't want to build locally? Prebuilt **multi-arch** images (`amd64` + `arm64`) are published to **GHCR and Docker Hub**, so you can pull and run:
+
+```bash
+git clone https://github.com/hendurhance/koel.git && cd koel
+cp .env.example .env                                  # set APP_SECRET + SMTP_*
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+docker compose -f docker-compose.prod.yml exec api koel db seed
+```
+
+**Images** (multi-arch, mirrored to both registries):
+
+| | GitHub Container Registry | Docker Hub |
+|---|---|---|
+| API · worker · beat | [`ghcr.io/hendurhance/koel`](https://github.com/hendurhance/koel/pkgs/container/koel) | [`hendurhance/koel`](https://hub.docker.com/r/hendurhance/koel) |
+| Dashboard | [`ghcr.io/hendurhance/koel-frontend`](https://github.com/hendurhance/koel/pkgs/container/koel-frontend) | [`hendurhance/koel-frontend`](https://hub.docker.com/r/hendurhance/koel-frontend) |
+
+Or pull directly:
+
+```bash
+docker pull ghcr.io/hendurhance/koel:1.0.0   # GitHub Container Registry
+docker pull hendurhance/koel:1.0.0           # Docker Hub
+```
+
+`docker-compose.prod.yml` uses the GHCR images by default; pin a release with `KOEL_TAG` (e.g. `KOEL_TAG=1.0.0`).
+
+---
+
 ## Quick start (local, no Docker)
 
 Requires Python 3.12+, Postgres 14+, Redis 7+.
