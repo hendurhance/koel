@@ -24,6 +24,11 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --only-upgrade libgnutls30 \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+    && rm -rf /var/lib/apt/lists/*
+
 # node:slim already ships a non-root `node` user (uid/gid 1000); reuse it.
 COPY --from=builder --chown=node:node /app/.output ./.output
 

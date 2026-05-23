@@ -26,5 +26,8 @@
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.3",
     "vue-tsc": "^2.1.10"
+  },
+  "overrides": {
+    "devalue": "^5.8.1"
   }
 }
