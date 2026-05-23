@@ -13,7 +13,7 @@ All rate / currency / source endpoints require an API key passed as `X-API-Key: 
 Liveness — always returns 200 when the process is up.
 
 ```json
-{ "status": "ok", "version": "2.0.0a1" }
+{ "status": "ok", "version": "1.0.0" }
 ```
 
 ### `GET /readyz`

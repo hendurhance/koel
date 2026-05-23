@@ -3,6 +3,11 @@
   <p>
     <b>Self-hostable exchange rate API with consensus scraping, partitioned history, and API-key-based access.</b>
   </p>
+  <p>
+    <img src="https://img.shields.io/badge/version-1.0.0-27645F" alt="version 1.0.0" />
+    <img src="https://img.shields.io/badge/license-Elastic--2.0-27645F" alt="Elastic License 2.0" />
+    <img src="https://img.shields.io/badge/python-3.12+-27645F" alt="Python 3.12+" />
+  </p>
 </div>
 
 Koel answers "what is 1 EUR in USD right now?" and "what was it every hour for the last 30 days?" It does that by scraping a rotating pool of public rate sources, running consensus across them, and serving the result from Postgres over a small, typed HTTP API.
