@@ -1,373 +1,152 @@
 <div align="center">
-  <img src="/docs/images/koel-logo.png" alt="logo" width="300" height="auto" />
-  <br/>
+  <img src="docs/images/koel-logo.png" alt="Koel" width="260" height="auto" />
   <p>
-    <b>💱 Koel is a free, open-source, self-hosted exchange rate API that aggregates real-time currency conversion data by scraping multiple sources, ensuring high availability and accuracy through an event-driven, fault-tolerant architecture.</b>
-    <br/>
-    <span>
-      No usage limits, no API keys. Works great on client-side in the browser or mobile apps. You can deploy it on your own server or in a Docker container.
-    </span>
-  </p>
-  <p>
-    <a href="https://github.com/hendurhance/koel/issues/new?assignees=&labels=&template=bug_report.md&title=">Report Bug</a>
-    ·
-    <a href="https://github.com/hendurhance/koel/issues/new?assignees=&labels=&template=feature_request.md&title=">Request Feature</a>
+    <b>Self-hostable exchange rate API with consensus scraping, partitioned history, and API-key-based access.</b>
   </p>
 </div>
 
-> If you are here to understand how this was built, you can check out the **[technical documentation](/docs/TECHNICAL_DOCUMENTATION.md)** for the system design, architecture, and design patterns used in this project. You can also check out the **[list of features](/docs/FEATURES.md)** to see what this project can do.
+Koel answers "what is 1 EUR in USD right now?" and "what was it every hour for the last 30 days?" It does that by scraping a rotating pool of public rate sources, running consensus across them, and serving the result from Postgres over a small, typed HTTP API.
 
-## Table of Contents
-- [About Koel](#about-koel)
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Installation](#installation)
-- [Usage](#usage)
-- [API Reference](#api-reference)
-- [Sources](#sources)
-- [Contributing](#contributing)
-- [License](#license)
+It is an operator-first project: one `docker compose up` and it runs. Users sign in by magic link, mint API keys scoped to a group, and use those keys to hit `/rates/current` and `/rates/history`.
 
-## About Koel
+<div align="center">
+  <img src="docs/images/koel-screenshot.png" alt="Koel dashboard" width="820" />
+</div>
 
-Koel is a free, open-source, self-hosted exchange rate API that provides api endpoint to retrieve latest rates, historical data or time series data. It aggregates real-time currency conversion data by scraping multiple sources, ensuring high availability and accuracy through an event-driven, fault-tolerant architecture. Koel is designed to be easy to deploy and use, with no usage limits or API keys required.
+---
 
-## Features
+## Highlights
 
-- **Real-Time Data Aggregation:** Scrapes multiple sources to gather the latest exchange rates.
-- **Self-Hosted:** Deploy Koel on your own infrastructure without relying on third-party APIs.
-- **Fault-Tolerant:** Uses a factory pattern and multiple data sources to ensure data availability even if one source fails.
-- **Event-Driven Architecture:** Background tasks powered by Celery for regular and scheduled scrapes.
-- **High Performance:** Optimized for high-volume writes and fast read operations with techniques such as denormalization, bulk upserts, and partitioning.
-- **No Usage Limits:** Enjoy unlimited requests with no API keys required.
-- **Client-Side Friendly:** Easily integrate with browser or mobile applications.
-- **Docker Support:** Containerize your deployment for consistency and ease of use.
+- **Consensus scraping.** Every USD→X pair is scraped from multiple sources; only the agreed-upon rate is persisted. Divergent sources trigger alerts, not bad data.
+- **USD pivot.** Scrape only USD→X, derive all cross-pairs (EUR→JPY, GBP→INR, etc.) at read time. Fewer bytes in, no loss of coverage.
+- **Partitioned Postgres.** `exchange_rates_history`, `api_usage_events`, and raw observations are range-partitioned by month, dropped as whole partitions per retention window (24 months for history, 6 for usage events, 3 for raw observations).
+- **Per-source circuit breakers.** A source that starts failing is cooled down automatically, probed, and either recovered or kept out — with Slack alerts on every transition humans care about.
+- **Magic-link auth + API keys.** Passwordless login via SMTP, session cookies in Redis, API keys grouped under users with per-key rate limits and usage tracking.
+- **Observability out of the box.** Structured JSON logs (`structlog`), Prometheus metrics at `/metrics`, request-ID correlation, and Slack notifications for crawl cycles, circuit flips, and backups.
+- **Daily S3 backups.** `pg_dump` → `aioboto3` → S3 every night, with Slack success/failure dispatch.
 
-## Getting Started
+---
 
-### Prerequisites
-
-- **Python 3.8+** – The project is built with Python and uses modern asynchronous libraries.
-- **PostgreSQL 10+** – Recommended for its native partitioning support.
-- **Redis** – Used for caching, which is required for the application to run and keep track of jobs.
-- **Celery** – For background tasks and scheduling.
-- **Alembic** – For database migrations.
-- **Docker & Docker Compose** (optional) – For containerized deployment.
-
-### Clone the Repository
+## Quick start (Docker)
 
 ```bash
 git clone https://github.com/hendurhance/koel.git
 cd koel
-```
-
-## Installation
-### Using Docker Compose
-<!-- first bullet point in numbers -->
-1. Build and Start the Containers:
-```bash
-docker-compose up -d --build
-# or use the Makefile
-make build && make up
-```
-2. The Docker setup includes:
-   - **PostgreSQL**: Database service with health checks
-   - **Redis**: Cache and message broker with persistence
-   - **API**: FastAPI application service
-   - **Celery Worker**: Background task processing
-   - **Celery Beat**: Scheduled task management
-   - **Init**: Automatic database migration and seeding
-   - **Test**: Dedicated testing environment
-3. Access the API documentation:
-```bash
-http://localhost:8000/docs
-```
-
-### Using Makefile Commands
-The project includes a Makefile with convenient commands:
-```bash
-# View all available commands
-make help
-
-# Development workflow
-make build          # Build Docker containers
-make up             # Start all services with initialization
-make down           # Stop all services
-make logs           # View service logs
-make shell          # Open shell in API container
-
-# Testing
-make test-basic     # Run basic tests (no dependencies)
-make test           # Run all available tests
-make test-docker    # Run tests in Docker
-make test-full      # Run pytest with coverage
-
-# Development
-make dev            # Run development server
-make lint           # Run code linting
-make format         # Format code
-```
-
-### Local Installation
-1. Create a virtual environment:
-```bash
-python3 -m venv venv
-```
-2. Activate the virtual environment:
-```bash
-# On Windows
-venv\Scripts\activate
-# On macOS/Linux
-source venv/bin/activate
-```
-3. Install the required packages:
-```bash
-pip install -r requirements.txt
-```
-4. Create a `.env` file in the root directory and set the required environment variables:
-```bash
 cp .env.example .env
-```
-5. Update the `.env` file with your PostgreSQL database credentials and other configurations.
-6. Install the database migrations:
-```bash
-alembic upgrade head
-```
-7. Run the seeders to populate the database with currency data:
-```bash
-python app/db/seed.py
-```
-8. Start the application:
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-9. Access the API documentation:
-```bash
-http://localhost:8000/docs
-
-# or
-http://localhost:8000/redoc
+docker compose up -d
+docker compose exec api uv run alembic upgrade head
+docker compose exec api uv run koel db seed
 ```
 
-## Usage
-### API Endpoints
-- **Get Currency List:**
-  - `GET /api/currencies`
-  - Returns a list of all available currencies.
-  - Response:
-    ```json
-    {
-        "success": true,
-        "data": [
-            {
-            "id": 1,
-            "name": "Euro",
-            "name_plural": "euros",
-            "code": "EUR",
-            "symbol": "€",
-            "decimal_digits": 2,
-            "icon": null,
-            "created_at": "2025-04-12T16:27:05.360172+01:00",
-            "updated_at": "2025-04-12T16:27:05.360172+01:00"
-            },
-            {
-            "id": 2,
-            "name": "United Arab Emirates Dirham",
-            "name_plural": "UAE dirhams",
-            "code": "AED",
-            "symbol": "AED",
-            "decimal_digits": 2,
-            "icon": null,
-            "created_at": "2025-04-12T16:27:05.360172+01:00",
-            "updated_at": "2025-04-12T16:27:05.360172+01:00"
-            },
-            ...
-        }
-    ]
-    ```
-- **Get Exchange Rate:**
-  - `GET /api/rates?from=USD&to=EUR`
-  - Query parameters:
-    - `from`: The base currency code (e.g., USD).
-    - `to`: The target currency code (e.g., EUR).
-    - `amount`: The amount to convert (optional, default is 1).
-  - Returns the exchange rate from one currency to another.
-    - Response:
-        ```json
-        {
-            "success": true,
-            "data": {
-                "id": 31329,
-                "base_currency_id": 9,
-                "target_currency_id": 1,
-                "rate": 0.88019,
-                "source": "trading-economics",
-                "created_at": "2025-04-13T12:04:27.949186+01:00",
-                "base_currency": {
-                "id": 9,
-                "name": "US Dollar",
-                "name_plural": "US dollars",
-                "code": "USD",
-                "symbol": "$",
-                "decimal_digits": 2,
-                "icon": null,
-                "created_at": "2025-04-12T16:27:05.360172+01:00",
-                "updated_at": "2025-04-12T16:27:05.360172+01:00"
-                },
-                "target_currency": {
-                "id": 1,
-                "name": "Euro",
-                "name_plural": "euros",
-                "code": "EUR",
-                "symbol": "€",
-                "decimal_digits": 2,
-                "icon": null,
-                "created_at": "2025-04-12T16:27:05.360172+01:00",
-                "updated_at": "2025-04-12T16:27:05.360172+01:00"
-                },
-                "amount": null,
-                "converted_amount": null
-            },
-            "message": "Exchange rate retrieved successfully."
-        }
-        ```
-- **Get Exchange Rate History:**
-  - `GET /api/rates/history?from=USD&to=EUR&from_date=2025-04-01&to_date=2025-04-10`
-  - Query parameters:
-    - `from`: The base currency code (e.g., USD).
-    - `to`: The target currency code (e.g., EUR).
-    - `from_date`: The start date for the history (format: YYYY-MM-DD).
-    - `to_date`: The end date for the history (format: YYYY-MM-DD).
-  - Returns the historical exchange rates between two currencies.
-    - Response:
-        ```json
-        {
-            "success": true,
-            "data": {
-                "base": "USD",
-                "target": "EUR",
-                "rates": [
-                    {
-                        "id": 129,
-                        "base_currency_id": 9,
-                        "target_currency_id": 1,
-                        "rate": 0.88019,
-                        "source": "trading-economics",
-                        "created_at": "2025-04-12T23:46:41.554303+01:00"
-                    },
-                    {
-                        "id": 15537,
-                        "base_currency_id": 9,
-                        "target_currency_id": 1,
-                        "rate": 0.88019,
-                        "source": "trading-economics",
-                        "created_at": "2025-04-13T11:34:08.462136+01:00"
-                    },
-                    {
-                        "id": 31329,
-                        "base_currency_id": 9,
-                        "target_currency_id": 1,
-                        "rate": 0.88019,
-                        "source": "trading-economics",
-                        "created_at": "2025-04-13T12:04:27.949186+01:00"
-                    },
-                    ...
-                ]
-            },
-            "message": "Exchange rate history retrieved successfully."
-        }
-        ```
-### Background Tasks
-Koel uses Celery to run background tasks for scraping data from multiple sources. The tasks are defined in the `app/tasks/celery_app.py` directory. You can run the Celery worker using the following command:
+This brings up Postgres, Redis, the API, a Celery worker, and Celery beat. The two exec steps apply migrations and seed currencies + sources into the database.
+
+Hit it:
 
 ```bash
-celery -A app.tasks.celery_app worker --loglevel=info
+curl http://localhost:8000/healthz
 ```
-This will start the Celery worker and listen for tasks to execute. You can also run the Celery beat scheduler to schedule periodic tasks:
+
+You now have a running API. To use the rate endpoints you need an API key — see [API keys](#api-keys) below.
+
+---
+
+## Quick start (local, no Docker)
+
+Requires Python 3.12+, Postgres 14+, Redis 7+.
 
 ```bash
-celery -A app.tasks.celery_app beat --loglevel=info
+./scripts/setup-local.sh          # installs uv, creates venv, installs deps
+cp .env.example .env              # then edit DATABASE_URL / REDIS_URL
+uv run alembic upgrade head
+uv run koel db seed               # seeds currencies + sources
+make dev                          # starts api + worker + beat via honcho
 ```
-### Caching
-Koel uses Redis for caching the exchange rates to improve performance and run job and tasks. You can configure the caching settings in the `.env` file. By default, Koel uses a Redis instance running on `localhost:6379`. You can change the Redis URL in the `.env` file:
-```env
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-REDIS_PASSWORD=
-```
-### Database
-Koel uses PostgreSQL as the database backend. You can configure the database settings in the `.env` file. By default, Koel uses a PostgreSQL instance running on `localhost:5432`. You can change the database URL in the `.env` file:
-```env
-API_VERSION=0.1.0
-API_TITLE=Koel Exchange Rate API
-APP_PORT=8000
+See `docs/operations.md` for the full local dev walkthrough.
 
-DB_CONNECTION=postgresql
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=
-DB_NAME=koel
+---
 
-# Set to "true" to seed the database on initialization
-SEED_DB=true
-```
-## Sources
-Koel scrapes data from multiple sources to provide accurate and up-to-date exchange rates. The sources are defined in the `app/scraping/sources` directory. You can add or modify the sources by creating new classes that extend the `BaseScraper` class.
-### Supported Sources
-| Source Name | Description | Source URL | Pair Type |
-| ----------- | ----------- | ---------- | ---- |
-| [Trading Economics](https://tradingeconomics.com/) | Provides real-time exchange rates and economic data. | [tradingeconomics.com](https://tradingeconomics.com/) | Multi Pair |
-| [Exchange Rates Org Uk](https://exchangerates.org.uk/) | Provides exchange rates and currency conversion data. | [exchangerates.org.uk](https://exchangerates.org.uk/) | Multi Pair |
-| [Currency Converter Org Uk](https://www.currencyconverter.org.uk) | Provides currency conversion data and exchange rates. | [currencyconverter.co.uk](https://www.currencyconverter.org.uk) | Multi Pair |
-| [X-Rates](https://www.x-rates.com/) | Provides exchange rates and currency conversion data. | [x-rates.com](https://www.x-rates.com/) | Multi Pair |
-| [Forbes](https://www.forbes.com/) | Provides exchange rates and financial news. | [forbes.com](https://www.forbes.com/) | Single Pair |
-| [Hexa Rates](https://hexarate.paikama.co) | Provides exchange rates and currency conversion data. | [hexarate.paikama.co](https://hexarate.paikama.co) | Single Pair |
-| [FxEmpire](https://fxempire.com/) | Provides exchange rates and financial news. | [fxempire.com](https://fxempire.com/) | Single Pair |
-| [Oanda](https://www.oanda.com/) | Provides exchange rates and financial data. | [oanda.com](https://www.oanda.com/) | Single Pair |
-| [Wise](https://wise.com/) | Provides exchange rates and currency conversion data. | [wise.com](https://wise.com/) | Single Pair |
-| [Xe](https://xe.com/) | Provides exchange rates and currency conversion data. | [xe.com](https://xe.com/) | Single Pair |
+## API surface
 
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `GET /healthz` | none | Liveness probe |
+| `GET /readyz`  | none | Readiness probe (DB + Redis) |
+| `GET /metrics` | none | Prometheus exposition format |
+| `POST /auth/request-link` | none | Request a magic-link email |
+| `GET /auth/verify?token=…` | none | Consume a magic link, issue session |
+| `POST /auth/logout` | session | Invalidate the current session |
+| `GET /auth/me` | session | Current authenticated user |
+| `GET  /keys/groups` | session | List your key groups |
+| `POST /keys/groups` | session | Create a key group |
+| `GET  /keys/groups/{id}/keys` | session | List keys under a group |
+| `POST /keys/groups/{id}/keys` | session | Mint a new API key (full value returned once) |
+| `DELETE /keys/keys/{id}` | session | Revoke a key |
+| `GET /usage/summary` | session | Per-day + per-endpoint usage, scoped to your keys |
+| `GET /admin/audit` | admin session | Recent audit-log entries (`role: admin` only) |
+| `GET /rates/current?base=USD&target=EUR` | api key | Latest consensus rate for a pair |
+| `GET /rates/history?base=USD&target=EUR&since=…&until=…` | api key | Hourly-anchored series |
+| `GET /rates/convert?from=USD&to=EUR&amount=100` | api key | Convert an amount at the current rate |
+| `GET /currencies` | api key | Supported currencies |
+| `GET /sources` | api key | Sources currently callable |
 
-## Contributing
-We welcome contributions to Koel! If you would like to contribute, please follow these steps:
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix:
-```bash
-git checkout -b feature/your-feature-name
-```
-3. Make your changes and commit them:
-```bash
-git commit -m "Add your feature or fix"
-```
-4. Push your changes to your forked repository:
-```bash
-git push origin feature/your-feature-name
-```
-5. Create a pull request to the main repository.
-6. Describe your changes and why they should be merged.
-7. Wait for feedback and make any necessary changes.
-8. Once approved, your changes will be merged into the main repository.
+Pass API keys via the `X-API-Key: <key>` header. The full reference lives in `docs/api.md`.
+
+---
+
+## API keys
+
+1. `POST /auth/request-link` with your email.
+2. Click the magic link you receive (Mailtrap / Postmark / Gmail — anything SMTP). This hits `GET /auth/verify?token=…` and issues a session cookie.
+3. `POST /keys/groups` to create a group.
+4. `POST /keys/groups/{group_id}/keys` to mint a key under it. The **full key is returned once** and never stored unhashed.
+5. Use that key as `X-API-Key: <key>` on rate endpoints.
+
+Revoke with `DELETE /keys/keys/{id}`.
+
+---
+
+## Configuration
+
+Every knob is an env var; defaults come from `Settings` in `koel/config.py`. The ones you're most likely to touch:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+psycopg://…/koel` | Postgres DSN (SQLAlchemy form) |
+| `REDIS_URL` | `redis://localhost:6379/0` | Cache + Celery broker + session store |
+| `APP_SECRET` | `please-change-me` | Signs session cookies; **must** be set in prod |
+| `INITIAL_ADMIN_EMAIL` | empty | First login with this email becomes admin |
+| `SMTP_HOST` / `SMTP_*` | empty | SMTP for magic-link delivery |
+| `SLACK_WEBHOOK_URL` | empty | Slack webhook (empty disables notifications) |
+| `BACKUP_ENABLED` | `False` | Flip on for daily S3 dumps |
+| `BACKUP_S3_BUCKET` / `AWS_*` | empty | Backup destination + credentials |
+
+See `.env.example` for the full list with brief descriptions.
+
+---
+
+## Documentation
+
+- [`docs/architecture.md`](docs/architecture.md) — How the pieces fit, why USD pivot, why partitioned history.
+- [`docs/api.md`](docs/api.md) — Full endpoint reference with request/response shapes.
+- [`docs/sources.md`](docs/sources.md) — Scrape sources, how each is crawled, and how to add or shelve one.
+- [`docs/operations.md`](docs/operations.md) — Local dev, deploy, backups, Slack, observability.
+- [`docs/chaos.md`](docs/chaos.md) — Kill-scenario runbook for pre-deploy rehearsal.
+
+---
+
+## Stack
+
+`FastAPI` · `SQLAlchemy 2` · `Postgres` (partitioned) · `Redis` · `Celery` + `Celery Beat` · `curl_cffi` + `selectolax` (scraping) · `aiosmtplib` + `jinja2` (passwordless auth + email) · `aioboto3` (backups) · `structlog` + `prometheus-client` (observability) · `uv` + `hatchling` (packaging).
+
+---
+
+## Status
+
+Built and working end-to-end: scraping + consensus, the full HTTP API, magic-link auth, API keys, usage tracking, S3 backups, and the dashboard. The remaining work is operator-side — running the load + chaos gates against a real staging environment and recording the results in [`docs/chaos.md`](docs/chaos.md).
+
+---
 
 ## License
-Koel is licensed under the [MIT License](LICENSE). Feel free to use, modify, and distribute this software as per the terms of the license.
 
-## Acknowledgments
-- [FastAPI](https://fastapi.tiangolo.com/) - The web framework used for building the API.
-- [Celery](https://docs.celeryproject.org/en/stable/) - The task queue used for background tasks.
-- [Redis](https://redis.io/) - The in-memory data structure store used for caching and job tracking.
-- [PostgreSQL](https://www.postgresql.org/) - The database used for storing exchange rates and currency data.
-- [Alembic](https://alembic.sqlalchemy.org/en/latest/) - The database migration tool used for managing schema changes.
-- [Docker](https://www.docker.com/) - The containerization platform used for deploying Koel.
-- [Docker Compose](https://docs.docker.com/compose/) - The tool used for defining and running multi-container Docker applications.
-- [Pydantic](https://pydantic-docs.helpmanual.io/) - The data validation and settings management library used for defining data models.
-- [SQLAlchemy](https://www.sqlalchemy.org/) - The SQL toolkit and Object-Relational Mapping (ORM) library used for database interactions.
-- [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/) - The library used for web scraping and parsing HTML.
-- [Requests](https://docs.python-requests.org/en/latest/) - The library used for making HTTP requests.
-
-## 👥 Authors 
-- Endurance - [Github](https://github.com/hendurhance) - [Twitter](https://twitter.com/hendurhance) - [LinkedIn](https://www.linkedin.com/in/hendurhance/)
+[Elastic License 2.0](LICENSE). Free to use, self-host, modify, and run commercially — but you may **not** offer Koel to others as a hosted/managed service, and you may not strip its licensing or copyright notices. See [`LICENSE`](LICENSE) for the full terms.
