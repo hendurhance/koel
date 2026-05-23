@@ -139,6 +139,33 @@ Set `SLACK_WEBHOOK_URL` to a Slack Incoming Webhook URL. You'll get notification
 
 Koel is a stock Docker app; any host that runs Docker runs Koel. The Dockerfile is multi-stage and lands on `python:3.12-slim`.
 
+### Deploy from published images
+
+The `release` workflow (`.github/workflows/release.yml`) builds and pushes two multi-arch images (`linux/amd64` + `linux/arm64`) to GHCR on every `v*` tag:
+
+- `ghcr.io/hendurhance/koel` — API, worker, and beat (same image, different commands).
+- `ghcr.io/hendurhance/koel-frontend` — the Nuxt dashboard (standalone Nitro server).
+
+Cut a release by pushing a tag; CI publishes `1.2.3`, `1.2`, and `latest`:
+
+```bash
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+The first time, make both GHCR packages public (repo → Packages → each package → Package settings → Change visibility) so hosts can pull without authenticating.
+
+On the host, deploy with the pull-and-run compose file — no source checkout, no build:
+
+```bash
+cp .env.example .env            # set APP_SECRET + SMTP_*; hosts are already postgres/redis
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+docker compose -f docker-compose.prod.yml exec api koel db seed
+```
+
+Pin a specific release with `KOEL_TAG` (e.g. `KOEL_TAG=1.2.3`); it defaults to the version baked into the compose file. Postgres and Redis are kept off the host network there — only the API (`:8000`) and dashboard (`:3000`) are published.
+
 ### Fly.io / Railway / Render
 
 Point the service at the container, set the env vars above, attach a Postgres + Redis. Run one instance of each service type — `api` (any number), `worker` (any number), `beat` (**exactly one**).

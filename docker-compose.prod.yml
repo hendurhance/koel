@@ -1,0 +1,101 @@
+name: koel
+
+# Pull-and-run deployment: prebuilt images from GHCR, no local build.
+#
+#   cp .env.example .env            # then set APP_SECRET + SMTP_*
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+#   docker compose -f docker-compose.prod.yml exec api koel db seed
+#
+# Pin a release with KOEL_TAG (defaults below). Postgres/Redis are not exposed
+# to the host here — only the api (:8000) and dashboard (:3000).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-koel}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: ghcr.io/hendurhance/koel:${KOEL_TAG:-1.0.0}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    command: ["uvicorn", "koel.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    image: ghcr.io/hendurhance/koel:${KOEL_TAG:-1.0.0}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    command: ["celery", "-A", "koel.tasks.celery_app", "worker",
+              "--loglevel=info",
+              "--queues=scraping,notifications,maintenance,usage"]
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A koel.tasks.celery_app inspect ping -t 5 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  beat:
+    image: ghcr.io/hendurhance/koel:${KOEL_TAG:-1.0.0}
+    restart: unless-stopped
+    depends_on:
+      - worker
+    env_file: .env
+    command: ["celery", "-A", "koel.tasks.celery_app", "beat",
+              "--loglevel=info",
+              "--schedule=/tmp/celerybeat-schedule"]
+    healthcheck:
+      disable: true
+
+  frontend:
+    image: ghcr.io/hendurhance/koel-frontend:${KOEL_TAG:-1.0.0}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NUXT_KOEL_API_BASE: http://api:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+volumes:
+  postgres_data:
+  redis_data:
