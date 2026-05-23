@@ -87,7 +87,7 @@ tmp/
 *.log
 *.log.*
 
-celerybeat-schedule
+celerybeat-schedule*
 
 # System Files
 .DS_Store

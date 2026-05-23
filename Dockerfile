@@ -1,43 +1,71 @@
-# Use Python 3.11 as the base image
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1.7
 
-# Set working directory
-WORKDIR /app
+# =============================================================================
+# Stage 1 — builder: install deps into /app/.venv via uv
+# =============================================================================
+FROM python:3.12-slim AS builder
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    TZ=UTC
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    postgresql-client \
-    libpq-dev \
-    curl \
-    && apt-get clean \
+        build-essential \
+        libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create directory for logs with proper permissions
-RUN mkdir -p /app/logs && \
-    touch /app/logs/app.log && \
-    chmod 777 /app/logs/app.log
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
 
-# Copy requirements file and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+WORKDIR /app
 
-# Copy project files
-COPY . .
+# Install dependencies (cached separately from source)
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
-# Expose port for FastAPI
+# Install the project itself
+COPY koel ./koel
+COPY alembic ./alembic
+COPY alembic.ini ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+# =============================================================================
+# Stage 2 — runtime: slim image, non-root user, no build tools
+# =============================================================================
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH" \
+    TZ=UTC
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 \
+        postgresql-client \
+        curl \
+        tini \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --system --gid 1000 koel && \
+    useradd --system --uid 1000 --gid koel --shell /bin/bash --create-home koel
+
+WORKDIR /app
+
+COPY --from=builder --chown=koel:koel /app/.venv /app/.venv
+COPY --chown=koel:koel koel ./koel
+COPY --chown=koel:koel alembic ./alembic
+COPY --chown=koel:koel alembic.ini ./
+COPY --chown=koel:koel pyproject.toml ./
+
+USER koel
+
 EXPOSE 8000
 
-# Create a non-root user to run the application
-RUN adduser --disabled-password --gecos "" appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -fsS http://localhost:8000/healthz || exit 1
 
-# Command placeholder - will be overridden in docker-compose
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["uvicorn", "koel.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

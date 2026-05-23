@@ -1,97 +1,97 @@
-.PHONY: help build up down test test-unit test-integration clean logs shell
+.PHONY: help setup dev dev-api dev-worker dev-beat test test-unit test-integration \
+        lint format typecheck db-reset uv-lock openapi \
+        docker-build docker-up docker-down docker-dev docker-logs docker-shell docker-clean
 
-# Default target
-help:
-	@echo "Available targets:"
-	@echo "  build           - Build Docker containers"
-	@echo "  up              - Start all services"
-	@echo "  down            - Stop all services"
-	@echo "  test-basic      - Run basic tests (no dependencies)"
-	@echo "  test            - Run all available tests"
-	@echo "  test-full       - Run pytest with coverage"
-	@echo "  test-unit       - Run unit tests only"
-	@echo "  test-integration - Run integration tests only"
-	@echo "  test-docker     - Run tests in Docker"
-	@echo "  clean           - Clean up Docker containers and volumes"
-	@echo "  logs            - Show logs from all services"
-	@echo "  shell           - Open shell in API container"
-	@echo "  lint            - Run code linting"
-	@echo "  format          - Format code"
+SHELL := /bin/bash
 
-# Build Docker containers
-build:
-	docker-compose build
+help:  ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
+	  awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
-# Start all services
-up:
-	docker-compose up -d postgres redis
-	sleep 10
-	docker-compose run --rm init
-	docker-compose up -d api celery_worker celery_beat
+# ----- Local dev (no Docker) -------------------------------------------------
 
-# Stop all services
-down:
-	docker-compose down
+setup:  ## Bootstrap local env (Postgres, Redis, uv, deps). Works on mac/linux.
+	bash scripts/setup-local.sh
 
-# Run basic tests (no dependencies required)
-test-basic:
-	python test_local.py
+uv-lock:  ## Regenerate uv.lock from pyproject.toml
+	uv lock
 
-# Run all tests locally (requires pytest)
-test:
-	python run_tests.py
+dev:  ## Run api + worker + beat together via honcho
+	uv run honcho -f Procfile start
 
-# Run pytest-based tests with coverage (requires pytest + coverage)
-test-full:
-	pytest -v --cov=app --cov-report=term-missing --cov-report=html
+dev-api:  ## Run just the API (hot reload)
+	uv run uvicorn koel.api.main:app --reload --host 0.0.0.0 --port 8000
 
-# Run unit tests only
-test-unit:
-	pytest tests/unit/ -v
+dev-worker:  ## Run just the Celery worker
+	uv run celery -A koel.tasks.celery_app worker --loglevel=info \
+	  --queues=scraping,notifications,maintenance,usage
 
-# Run integration tests only
-test-integration:
-	pytest tests/integration/ -v
+dev-beat:  ## Run just Celery beat
+	uv run celery -A koel.tasks.celery_app beat --loglevel=info
 
-# Run tests in Docker
-test-docker:
-	docker-compose run --rm test
+# ----- Quality ---------------------------------------------------------------
 
-# Clean up Docker containers and volumes
-clean:
-	docker-compose down -v
-	docker system prune -f
+lint:  ## ruff check
+	uv run ruff check koel tests
 
-# Show logs from all services
-logs:
-	docker-compose logs -f
+format:  ## ruff format
+	uv run ruff format koel tests
 
-# Open shell in API container
-shell:
-	docker-compose exec api bash
+typecheck:  ## mypy
+	uv run mypy koel
 
-# Run code linting (if tools are available)
-lint:
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff check app/ tests/; \
-	elif command -v flake8 >/dev/null 2>&1; then \
-		flake8 app/ tests/; \
-	else \
-		echo "No linting tool found. Install ruff or flake8."; \
-	fi
+# ----- Tests -----------------------------------------------------------------
 
-# Format code (if tools are available)
-format:
-	@if command -v black >/dev/null 2>&1; then \
-		black app/ tests/; \
-	else \
-		echo "Black not found. Install black for code formatting."; \
-	fi
+test: test-unit  ## Alias: unit tests
 
-# Install dependencies
-install:
-	pip install -r requirements.txt
+test-unit:  ## Unit tests (fast, no external deps)
+	uv run pytest tests/unit -v
 
-# Run development server
-dev:
-	uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+test-integration:  ## Integration tests (requires live Postgres + Redis)
+	uv run pytest tests/integration -v -m integration
+
+load:  ## Run Phase-10 load test (requires KOEL_API_KEY and a running stack)
+	KOEL_API_KEY=$${KOEL_API_KEY:?set KOEL_API_KEY to a valid key} \
+	uv run --extra load locust -f tests/load/locustfile.py \
+	  --host $${KOEL_HOST:-http://localhost:8000} \
+	  --users $${USERS:-500} --spawn-rate $${SPAWN_RATE:-50} \
+	  --run-time $${RUN_TIME:-5m} --headless \
+	  --csv build/loadtest
+
+# ----- Frontend API types ----------------------------------------------------
+
+openapi:  ## Dump OpenAPI schema -> frontend/openapi.json, then regen frontend TS types
+	uv run python scripts/dump_openapi.py
+	cd frontend && npm run gen:types
+
+# ----- Database --------------------------------------------------------------
+
+db-reset:  ## Drop + recreate the dev database, then migrate + seed
+	@echo "Resetting development database..."
+	@psql -h localhost -U postgres -c "DROP DATABASE IF EXISTS koel;" postgres
+	@psql -h localhost -U postgres -c "CREATE DATABASE koel OWNER postgres;" postgres
+	uv run alembic upgrade head
+	uv run python -m koel.db.seed || echo "(seed script not yet implemented)"
+
+# ----- Docker ----------------------------------------------------------------
+
+docker-build:  ## Build the Docker image
+	docker compose build
+
+docker-up:  ## Start the full stack (prod-like)
+	docker compose up -d
+
+docker-dev:  ## Start with the dev override (bind mount + reload)
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+docker-down:  ## Stop the stack
+	docker compose down
+
+docker-logs:  ## Tail logs from all services
+	docker compose logs -f
+
+docker-shell:  ## Open a shell inside the api container
+	docker compose exec api bash
+
+docker-clean:  ## Stop + delete volumes (destroys data!)
+	docker compose down -v

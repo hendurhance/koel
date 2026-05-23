@@ -1,1 +1,47 @@
+# VCS & editors
+.git
+.gitignore
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Python caches & artefacts
+__pycache__
+*.py[cod]
+*.egg-info
+.venv
+venv
+env
+ENV
+
+# Test caches
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# Local env + logs
+.env
+.env.*
+!.env.example
+logs
+*.log
+celerybeat-schedule*
+
+# Legacy project files that do NOT ship in the image
+app
+tests
+docs
+images
+*.md
+!README.md
+check_environment.py
+simple_test.py
+test_local.py
+run_tests.py
+requirements.txt
+Makefile
+docker-compose*.yml
 Dockerfile
