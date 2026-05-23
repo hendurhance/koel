@@ -1,0 +1,139 @@
+[project]
+name = "koel"
+version = "1.0.0"
+description = "Self-hostable exchange rate API with consensus scraping, partitioned history, and API-key-based access."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Elastic-2.0" }
+authors = [{ name = "Koel maintainers" }]
+
+dependencies = [
+    # Web
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "python-multipart>=0.0.12",
+
+    # Config
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "email-validator>=2.2.0",
+
+    # Database
+    "sqlalchemy>=2.0.30",
+    "psycopg[binary]>=3.2.0",
+    "alembic>=1.13.0",
+
+    # Cache / queue
+    "redis>=5.0.0",
+    "celery>=5.4.0",
+
+    # Scraping
+    "curl-cffi>=0.7.0",
+    "selectolax>=0.3.21",
+    "tenacity>=9.0.0",
+
+    # Mail
+    "aiosmtplib>=3.0.0",
+    "jinja2>=3.1.0",
+
+    # Cloud
+    "aioboto3>=13.0.0",
+
+    # Observability
+    "structlog>=24.4.0",
+    "prometheus-client>=0.20.0",
+
+    # CLI
+    "typer>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "honcho>=2.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "types-redis",
+]
+load = [
+    "locust>=2.32.0",
+]
+
+[project.scripts]
+koel = "koel.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["koel"]
+
+[tool.uv]
+package = true
+
+# ---- Tooling ------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["koel", "tests"]
+extend-exclude = ["alembic/versions/*_initial_migration.py"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",     # pycodestyle + pyflakes
+    "I",               # isort
+    "B",               # bugbear
+    "UP",              # pyupgrade
+    "SIM",             # simplify
+    "RUF",             # ruff-specific
+    "N",               # pep8-naming
+    "C4",              # comprehensions
+    "ASYNC",           # async best practices
+    "S",               # security (bandit)
+]
+ignore = [
+    "S101",  # assert used (fine in tests)
+    "E501",  # line length (formatter handles)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "N802"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/versions/", "tests/"]
+
+# Third-party libs that ship no type information.
+[[tool.mypy.overrides]]
+module = ["aioboto3.*", "celery.*", "curl_cffi.*"]
+ignore_missing_imports = true
+
+# Celery's task decorators are untyped by nature; don't reject them. The task
+# bodies themselves are still fully type-checked.
+[[tool.mypy.overrides]]
+module = ["koel.tasks.*"]
+disallow_untyped_decorators = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+markers = [
+    "integration: requires a live Postgres + Redis",
+]
+norecursedirs = [".git", ".venv", "venv"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]

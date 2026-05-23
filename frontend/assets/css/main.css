@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Switzer", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Author", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-surface: #fafaf7;
+  --color-surface-2: #f4f2eb;
+  --color-ink: #0e0f11;
+  --color-ink-muted: #5b5c5f;
+  --color-hairline: #e6e4dc;
+
+  /* Brand teal, from the koel logo (#27645F). */
+  --color-accent: #27645f;
+  --color-accent-soft: #e3efed;
+
+  --color-status-ok: #1a7f37;
+  --color-status-degraded: #9a6700;
+  --color-status-failing: #cf222e;
+
+  --radius-card: 2px;
+}
+
+.dark {
+  --color-surface: #0b0b0d;
+  --color-surface-2: #121214;
+  --color-ink: #efeae0;
+  --color-ink-muted: #8c8a82;
+  --color-hairline: #1f1e1a;
+  /* Lifted teal so the accent stays legible on the dark surface. */
+  --color-accent: #3e9a8e;
+  --color-accent-soft: #102b27;
+  --color-status-ok: #4ae290;
+  --color-status-degraded: #e5b04b;
+  --color-status-failing: #ff6b74;
+}
+
+html,
+body,
+#__nuxt {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* tabular numerals on anything data-shaped */
+table,
+code,
+.mono,
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* paper-grain: fixed overlay applied by adding `.noise` to a container */
+.noise::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+}
+.dark .noise::before {
+  mix-blend-mode: screen;
+  opacity: 0.04;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* hairline grid used behind empty states — applied via .grid-bg */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, var(--color-hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-hairline) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* staggered row reveal — applied once on mount via a parent class */
+.stagger-in > * {
+  opacity: 0;
+  transform: translateY(4px);
+  animation: row-in 240ms ease-out forwards;
+}
+.stagger-in > *:nth-child(1)  { animation-delay:   0ms; }
+.stagger-in > *:nth-child(2)  { animation-delay:  60ms; }
+.stagger-in > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-in > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-in > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-in > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-in > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-in > *:nth-child(8)  { animation-delay: 420ms; }
+.stagger-in > *:nth-child(n+9) { animation-delay: 480ms; }
+
+@keyframes row-in {
+  to { opacity: 1; transform: none; }
+}

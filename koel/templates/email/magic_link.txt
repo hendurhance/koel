@@ -1,0 +1,9 @@
+Sign in to {{ app_name }}
+
+Click the link below to finish signing in. It expires in {{ ttl_minutes }} minutes and can only be used once.
+
+{{ link_url }}
+
+If you didn't request this link, you can safely ignore this email — no one can sign in without it.
+
+— {{ app_name }} · sent automatically · do not reply

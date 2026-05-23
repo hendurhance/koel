@@ -1,0 +1,29 @@
+# Dev override: bind-mount source, enable reload, expose ports to host.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+name: koel
+
+services:
+  api:
+    volumes:
+      - ./koel:/app/koel
+      - ./alembic:/app/alembic
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+    command: ["uvicorn", "koel.api.main:app",
+              "--host", "0.0.0.0", "--port", "8000",
+              "--reload", "--reload-dir", "/app/koel"]
+
+  worker:
+    volumes:
+      - ./koel:/app/koel
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+
+  beat:
+    volumes:
+      - ./koel:/app/koel
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
