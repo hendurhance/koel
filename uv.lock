@@ -1172,7 +1172,7 @@ wheels = [
 
 [[package]]
 name = "koel"
-version = "2.0.0a1"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aioboto3" },
@@ -1182,6 +1182,7 @@ dependencies = [
     { name = "curl-cffi" },
     { name = "email-validator" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "jinja2" },
     { name = "prometheus-client" },
     { name = "psycopg", extra = ["binary"] },
@@ -1211,11 +1212,6 @@ load = [
     { name = "locust" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "httpx" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "aioboto3", specifier = ">=13.0.0" },
@@ -1226,6 +1222,7 @@ requires-dist = [
     { name = "email-validator", specifier = ">=2.2.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "honcho", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "locust", marker = "extra == 'load'", specifier = ">=2.32.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
@@ -1248,9 +1245,6 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
 provides-extras = ["dev", "load"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "httpx", specifier = ">=0.28.1" }]
 
 [[package]]
 name = "kombu"

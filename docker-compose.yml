@@ -62,6 +62,12 @@ services:
     command: ["celery", "-A", "koel.tasks.celery_app", "worker",
               "--loglevel=info",
               "--queues=scraping,notifications,maintenance,usage"]
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A koel.tasks.celery_app inspect ping -t 5 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   beat:
     image: koel:${KOEL_TAG:-dev}
@@ -69,8 +75,28 @@ services:
     depends_on:
       - worker
     env_file: .env
+    # Non-root container can't write the schedule db to WORKDIR; use a writable path.
     command: ["celery", "-A", "koel.tasks.celery_app", "beat",
-              "--loglevel=info"]
+              "--loglevel=info",
+              "--schedule=/tmp/celerybeat-schedule"]
+    # Inherits the api image's HTTP healthcheck, which doesn't apply to beat.
+    healthcheck:
+      disable: true
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+    image: koel-frontend:${KOEL_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    # Server-side proxy target: reach the api over the compose network.
+    environment:
+      NUXT_KOEL_API_BASE: http://api:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
 
 volumes:
   postgres_data:

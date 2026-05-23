@@ -43,6 +43,9 @@ dependencies = [
     "structlog>=24.4.0",
     "prometheus-client>=0.20.0",
 
+    # Notifications (Slack webhook)
+    "httpx>=0.28.1",
+
     # CLI
     "typer>=0.12.0",
 ]
@@ -132,8 +135,3 @@ markers = [
     "integration: requires a live Postgres + Redis",
 ]
 norecursedirs = [".git", ".venv", "venv"]
-
-[dependency-groups]
-dev = [
-    "httpx>=0.28.1",
-]

@@ -29,6 +29,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY koel ./koel
 COPY alembic ./alembic
 COPY alembic.ini ./
+COPY README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 

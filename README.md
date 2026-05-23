@@ -39,19 +39,20 @@ git clone https://github.com/hendurhance/koel.git
 cd koel
 cp .env.example .env
 docker compose up -d
-docker compose exec api uv run alembic upgrade head
-docker compose exec api uv run koel db seed
+docker compose exec api alembic upgrade head
+docker compose exec api koel db seed
 ```
 
-This brings up Postgres, Redis, the API, a Celery worker, and Celery beat. The two exec steps apply migrations and seed currencies + sources into the database.
+This brings up Postgres, Redis, the API, a Celery worker, Celery beat, and the Nuxt dashboard. The two exec steps apply migrations and seed currencies + sources into the database.
 
 Hit it:
 
 ```bash
-curl http://localhost:8000/healthz
+curl http://localhost:8000/healthz   # API
+open  http://localhost:3000          # dashboard
 ```
 
-You now have a running API. To use the rate endpoints you need an API key — see [API keys](#api-keys) below.
+You now have a running API at `:8000` and the dashboard at `:3000`. To use the rate endpoints you need an API key — see [API keys](#api-keys) below.
 
 ---
 
@@ -142,7 +143,7 @@ See `.env.example` for the full list with brief descriptions.
 
 ## Stack
 
-`FastAPI` · `SQLAlchemy 2` · `Postgres` (partitioned) · `Redis` · `Celery` + `Celery Beat` · `curl_cffi` + `selectolax` (scraping) · `aiosmtplib` + `jinja2` (passwordless auth + email) · `aioboto3` (backups) · `structlog` + `prometheus-client` (observability) · `uv` + `hatchling` (packaging).
+`FastAPI` · `SQLAlchemy 2` · `Postgres` (partitioned) · `Redis` · `Celery` + `Celery Beat` · `curl_cffi` + `selectolax` (scraping) · `aiosmtplib` + `jinja2` (passwordless auth + email) · `aioboto3` (backups) · `structlog` + `prometheus-client` (observability) · `Nuxt 3` + `Tailwind` (dashboard) · `uv` + `hatchling` (packaging).
 
 ---
 
