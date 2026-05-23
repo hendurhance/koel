@@ -54,7 +54,7 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
-            docker.io/${{ vars.DOCKERHUB_USERNAME }}/${{ matrix.name }}
+            ${{ vars.DOCKERHUB_USERNAME != '' && format('docker.io/{0}/{1}', vars.DOCKERHUB_USERNAME, matrix.name) || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
