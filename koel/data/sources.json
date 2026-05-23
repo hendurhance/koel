@@ -1,0 +1,200 @@
+[
+  {
+    "slug": "hexarate",
+    "name": "Hexarate",
+    "base_url": "https://hexarate.paikama.co",
+    "weight": 0.9,
+    "is_active": true,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "json_path": "data.mid"
+    }
+  },
+  {
+    "slug": "xe",
+    "name": "XE",
+    "base_url": "https://www.xe.com",
+    "weight": 1.2,
+    "is_active": true,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "path_template": "/currencyconverter/convert/?Amount=1&From={base}&To={target}"
+    }
+  },
+  {
+    "slug": "wise",
+    "name": "Wise",
+    "base_url": "https://wise.com",
+    "weight": 1.3,
+    "is_active": true,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "path_template": "/currency-converter/{base_lower}-to-{target_lower}-rate"
+    }
+  },
+  {
+    "slug": "oanda",
+    "name": "OANDA",
+    "base_url": "https://fxds-public-exchange-rates-api.oanda.com",
+    "weight": 1.2,
+    "is_active": true,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124"
+    }
+  },
+  {
+    "slug": "forbes",
+    "name": "Forbes Advisor",
+    "base_url": "https://www.forbes.com",
+    "weight": 0.9,
+    "is_active": true,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome131",
+      "path_template": "/advisor/money-transfer/currency-converter/{base_lower}-{target_lower}/?amount=1"
+    }
+  },
+  {
+    "slug": "fx_empire",
+    "name": "FXEmpire",
+    "base_url": "https://www.fxempire.com",
+    "weight": 0.9,
+    "is_active": true,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "path_template": "/currencies/{base_lower}-{target_lower}"
+    }
+  },
+  {
+    "slug": "xrates",
+    "name": "X-Rates",
+    "base_url": "https://www.x-rates.com",
+    "weight": 1.1,
+    "is_active": true,
+    "config": {
+      "mode": "bulk",
+      "impersonate": "chrome124",
+      "bulk_path_template": "/table/?from={base}&amount=1"
+    }
+  },
+  {
+    "slug": "trading_economics",
+    "name": "Trading Economics",
+    "base_url": "https://tradingeconomics.com",
+    "weight": 1.0,
+    "is_active": true,
+    "config": {
+      "mode": "bulk",
+      "impersonate": "chrome124",
+      "bulk_path_template": "/currencies?base={base}"
+    }
+  },
+  {
+    "slug": "exchange_rates_org",
+    "name": "ExchangeRates.org.uk",
+    "base_url": "https://www.exchangerates.org.uk",
+    "weight": 0.8,
+    "is_active": true,
+    "config": {
+      "mode": "bulk",
+      "impersonate": "chrome124",
+      "bulk_path_template": "/{base_name_slug}-{base}-currency-table.html",
+      "base_name_slug_map": {
+        "USD": "US-Dollar",
+        "EUR": "Euro",
+        "GBP": "British-Pound",
+        "JPY": "Japanese-Yen",
+        "CHF": "Swiss-Franc",
+        "CAD": "Canadian-Dollar",
+        "AUD": "Australian-Dollar",
+        "NZD": "New-Zealand-Dollar"
+      }
+    }
+  },
+  {
+    "slug": "floatrates",
+    "name": "FloatRates",
+    "base_url": "https://www.floatrates.com",
+    "weight": 0.8,
+    "is_active": true,
+    "config": {
+      "mode": "bulk",
+      "impersonate": "chrome131"
+    }
+  },
+  {
+    "slug": "marketwatch",
+    "name": "MarketWatch",
+    "base_url": "https://www.marketwatch.com",
+    "weight": 1.0,
+    "is_active": false,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "quote_template": "/investing/currency/{base_lower}{target_lower}",
+      "selector": "meta[name=price] (content; strip currency symbol)",
+      "notes": "Shelved. Verified live USD->EUR 2026-05-23."
+    }
+  },
+  {
+    "slug": "markets_insider",
+    "name": "Markets Insider",
+    "base_url": "https://markets.businessinsider.com",
+    "weight": 1.0,
+    "is_active": false,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "quote_template": "/currencies/{base_lower}-{target_lower}",
+      "selector": ".price-section__current-value",
+      "notes": "Shelved. Value may carry a currency suffix; first token is the rate. Verified live USD->EUR 2026-05-23."
+    }
+  },
+  {
+    "slug": "ft",
+    "name": "Financial Times",
+    "base_url": "https://markets.ft.com",
+    "weight": 1.1,
+    "is_active": false,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "quote_template": "/data/currencies/tearsheet/summary?s={base}{target}",
+      "selector": ".mod-ui-data-list__value",
+      "notes": "Shelved. First .mod-ui-data-list__value is the latest price. Verified live USD->EUR 2026-05-23."
+    }
+  },
+  {
+    "slug": "yahoo_finance",
+    "name": "Yahoo Finance",
+    "base_url": "https://query1.finance.yahoo.com",
+    "weight": 1.1,
+    "is_active": false,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "quote_template": "/v8/finance/chart/{base}{target}=X",
+      "json_path": "chart.result.0.meta.regularMarketPrice",
+      "notes": "Shelved. Yahoo's own chart API (HTML page is JS-rendered). Verified live USD->EUR 2026-05-23."
+    }
+  },
+  {
+    "slug": "investing",
+    "name": "Investing.com",
+    "base_url": "https://www.investing.com",
+    "weight": 1.0,
+    "is_active": false,
+    "config": {
+      "mode": "pair",
+      "impersonate": "chrome124",
+      "quote_template": "/currencies/{base_lower}-{target_lower}",
+      "selector": "[data-test=instrument-price-last]",
+      "notes": "Shelved. Cloudflare-fronted; expect intermittent challenges. Verified live USD->EUR 2026-05-23."
+    }
+  }
+]
