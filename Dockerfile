@@ -50,6 +50,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tini \
     && rm -rf /var/lib/apt/lists/*
 
+RUN /usr/local/bin/python -m pip install --no-cache-dir --upgrade pip
+
 RUN groupadd --system --gid 1000 koel && \
     useradd --system --uid 1000 --gid koel --shell /bin/bash --create-home koel
 
