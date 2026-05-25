@@ -169,6 +169,7 @@ See `.env.example` for the full list with brief descriptions.
 - [`docs/sources.md`](docs/sources.md) — Scrape sources, how each is crawled, and how to add or shelve one.
 - [`docs/operations.md`](docs/operations.md) — Local dev, deploy, backups, Slack, observability.
 - [`docs/chaos.md`](docs/chaos.md) — Kill-scenario runbook for pre-deploy rehearsal.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — How to set up development, run checks, and submit pull requests.
 
 ---
 
